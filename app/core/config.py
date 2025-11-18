@@ -10,9 +10,6 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8002
 
-    DATABASE_URL: str = "sqlite://./dev.db"
-    REDIS_URL: str = "redis://localhost:6379/0"
-
     API_GATEWAY_URL: str = "http://api_gateway:8080"
 
     BOT_TOKEN_MANAGER: str
@@ -20,7 +17,7 @@ class Settings(BaseSettings):
     ADMIN_TELEGRAM_IDS: Optional[str] = ""
     
     # Telegram WebApp URL (GitHub Pages или ваш хостинг)
-    WEBAPP_URL: str = "https://YOUR_GITHUB_USERNAME.github.io/telegram_bot_service/webapp/"
+    WEBAPP_URL: str = "https://myhac1.github.io/telegram_bot_service/webapp/"
 
     USE_WEBHOOK: bool = False
     WEBHOOK_DOMAIN: Optional[str] = None

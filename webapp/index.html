@@ -155,12 +155,6 @@
             </div>
 
             <div class="form-group">
-                <label for="email">Email *</label>
-                <input type="email" id="email" name="email" placeholder="ivan@example.com" required>
-                <div class="error" id="emailError">Введите корректный email</div>
-            </div>
-
-            <div class="form-group">
                 <label for="phone">Телефон *</label>
                 <input type="tel" id="phone" name="phone" placeholder="+7 999 123-45-67" required>
                 <div class="error" id="phoneError">Введите номер телефона</div>
@@ -200,40 +194,9 @@
         // Элементы формы
         const form = document.getElementById('registrationForm');
         const nameInput = document.getElementById('name');
-        const emailInput = document.getElementById('email');
         const phoneInput = document.getElementById('phone');
         const roleInput = document.getElementById('role');
         const roleButtons = document.querySelectorAll('.role-btn');
-
-        // Валидация email
-        function isValidEmail(email) {
-            const re = /^[\w\.-]+@[\w\.-]+\.\w+$/;
-            return re.test(email);
-        }
-
-        // Валидация телефона
-        function isValidPhone(phone) {
-            const digits = phone.replace(/\D/g, '');
-            return digits.length >= 7 && digits.length <= 15;
-        }
-
-        // Валидация даты (проверка формата и разумности)
-        function isValidDate(dateString) {
-            if (!dateString) return false;
-            // YYYY-MM-DD
-            const parts = dateString.split('-');
-            if (parts.length !== 3) return false;
-            const y = parseInt(parts[0], 10);
-            const m = parseInt(parts[1], 10);
-            const d = parseInt(parts[2], 10);
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return false;
-            // Простая граница: дата не может быть в будущем и год > 1900
-            const now = new Date();
-            if (date > now) return false;
-            if (y < 1900) return false;
-            return date.getFullYear() === y && (date.getMonth() + 1) === m && date.getDate() === d;
-        }
 
         // Обработка выбора роли
         roleButtons.forEach(btn => {
@@ -257,20 +220,20 @@
                 document.getElementById('nameError').classList.remove('show');
             }
 
-            // Проверка email
-            if (!isValidEmail(emailInput.value)) {
-                document.getElementById('emailError').classList.add('show');
-                isValid = false;
-            } else {
-                document.getElementById('emailError').classList.remove('show');
-            }
-
             // Проверка телефона
-            if (!isValidPhone(phoneInput.value)) {
+            if (!phoneInput.value.trim()) {
                 document.getElementById('phoneError').classList.add('show');
                 isValid = false;
             } else {
                 document.getElementById('phoneError').classList.remove('show');
+            }
+
+            // Проверка даты рождения
+            if (!document.getElementById('birth_date').value) {
+                document.getElementById('birthError').classList.add('show');
+                isValid = false;
+            } else {
+                document.getElementById('birthError').classList.remove('show');
             }
 
             // Проверка роли
@@ -289,7 +252,6 @@
             if (validateForm()) {
                 const formData = {
                     name: nameInput.value.trim(),
-                    email: emailInput.value.trim(),
                     phone: phoneInput.value.trim(),
                     birth_date: document.getElementById('birth_date').value,
                     role: roleInput.value,
@@ -307,10 +269,6 @@
         // Автоматическое удаление ошибок при вводе
         nameInput.addEventListener('input', () => {
             document.getElementById('nameError').classList.remove('show');
-        });
-
-        emailInput.addEventListener('input', () => {
-            document.getElementById('emailError').classList.remove('show');
         });
 
         phoneInput.addEventListener('input', () => {

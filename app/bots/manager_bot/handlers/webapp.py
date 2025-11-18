@@ -3,11 +3,9 @@ from aiogram.types import Message, WebAppInfo, KeyboardButton, ReplyKeyboardMark
 from aiogram.filters import Command
 import json
 
-from app.db.models import PendingRegistration
 from app.utils.logging import logger
 from app.core.config import settings
-from app.utils.validators import is_valid_email, is_valid_phone, is_valid_date
-from datetime import date
+from app.services.api_gateway_client import api_gateway_client
 
 router = Router()
 
@@ -15,7 +13,7 @@ router = Router()
 @router.message(Command("start"))
 async def cmd_start(message: Message):
     # Кнопка для открытия WebApp
-    webapp_url = settings.WEBAPP_URL if hasattr(settings, 'WEBAPP_URL') else "https://YOUR_GITHUB_USERNAME.github.io/telegram_bot_service/webapp/"
+    webapp_url = settings.WEBAPP_URL
     
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
@@ -38,82 +36,50 @@ async def cmd_start(message: Message):
 
 @router.message(F.web_app_data)
 async def handle_webapp_data(message: Message):
-    """Обработка данных из Telegram Mini App"""
+    """Обработка данных из Telegram Mini App - отправка в API Gateway"""
     try:
         # Парсим данные из WebApp
         data = json.loads(message.web_app_data.data)
         
-        logger.info(f"Received WebApp data: {data}")
+        logger.info(f"Received WebApp data from user {message.from_user.id}: {data}")
         
-        # Проверяем что все поля заполнены
-        required_fields = ['name', 'email', 'phone', 'role', 'birth_date']
+        # Проверяем что все обязательные поля заполнены
+        required_fields = ['name', 'phone', 'role', 'birth_date']
         if not all(field in data for field in required_fields):
             await message.answer("❌ Ошибка: не все поля заполнены")
             return
-
-        # Валидация полей
-        if not is_valid_email(data.get('email')):
-            await message.answer("❌ Некорректный email")
-            return
-        if not is_valid_phone(data.get('phone')):
-            await message.answer("❌ Некорректный номер телефона")
-            return
-        if not is_valid_date(data.get('birth_date')):
-            await message.answer("❌ Некорректная дата рождения")
-            return
-
-        # Разрешённые роли
-        allowed_roles = {"sale", "reten", "admin", "lead"}
-        role_value = str(data.get('role')).lower()
-        if role_value not in allowed_roles:
-            await message.answer("❌ Некорректная роль")
-            return
         
-        # Создаём pending регистрацию
+        # Отправляем данные в API Gateway для создания pending регистрации
         try:
-            # Преобразуем дату рождения в объект date
-            birth_date_val = None
-            try:
-                birth_date_val = date.fromisoformat(data.get('birth_date'))
-            except Exception:
-                birth_date_val = None
-
-            pending = await PendingRegistration.create(
-                telegram_id=message.from_user.id,
-                telegram_username=message.from_user.username,
-                name=data['name'],
-                email=data['email'],
-                phone=data['phone'],
-                birth_date=birth_date_val,
-                role=role_value,
-                status='pending'
-            )
+            manager_data = {
+                "telegram_id": message.from_user.id,
+                "telegram_username": message.from_user.username,
+                "name": data['name'],
+                "phone": data['phone'],
+                "birth_date": data['birth_date'],
+                "role": data['role'],
+                "status": "pending"
+            }
+            
+            # Создаем pending регистрацию через API Gateway
+            result = await api_gateway_client.create_pending_registration(manager_data)
             
             await message.answer(
-                f"✅ Заявка #{pending.id} успешно отправлена!\n\n"
+                f"✅ Заявка успешно отправлена!\n\n"
                 f"👤 ФИО: {data['name']}\n"
-                f"📧 Email: {data['email']}\n"
-                f"📱 Телефон: {data['phone']}\n"
-                f"💼 Роль: {data['role']}\n"
-                f"🎂 Дата рождения: {data.get('birth_date')}\n\n"
+                f" Телефон: {data['phone']}\n"
+                f"🎂 Дата рождения: {data['birth_date']}\n"
+                f"💼 Роль: {data['role']}\n\n"
                 f"Администратор рассмотрит вашу заявку и уведомит о решении."
             )
             
-            logger.info(f"Created pending registration #{pending.id} for user {message.from_user.id}")
+            logger.info(f"Successfully created pending registration for user {message.from_user.id}")
             
-        except Exception as db_error:
-            logger.exception("Failed to create pending registration in database")
-            
-            # Проверяем если пользователь уже зарегистрирован
-            existing = await PendingRegistration.filter(telegram_id=message.from_user.id).first()
-            if existing:
-                await message.answer(
-                    f"⚠️ У вас уже есть заявка #{existing.id}\n"
-                    f"Статус: {existing.status}\n\n"
-                    f"Дождитесь решения администратора."
-                )
-            else:
-                await message.answer("❌ Ошибка при сохранении заявки. Попробуйте позже.")
+        except Exception as api_error:
+            logger.exception("Failed to create pending registration via API Gateway")
+            await message.answer(
+                "❌ Ошибка при отправке заявки. Попробуйте позже или обратитесь к администратору."
+            )
     
     except json.JSONDecodeError:
         logger.exception("Failed to parse WebApp data")

@@ -1,5 +1,5 @@
 """
-Тестовый запуск бота без Redis (используется MemoryStorage для FSM)
+Тестовый запуск бота без БД и Redis (используется MemoryStorage для FSM)
 Для быстрого тестирования без Docker
 """
 from fastapi import FastAPI
@@ -8,7 +8,6 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.core.config import settings
-from app.core.database import init_db, close_db
 from app.utils.logging import setup_logging
 from app.bots.manager_bot.bot import setup_manager_bot, get_manager_bot
 from app.bots.admin_bot.bot import setup_admin_bot, get_admin_bot
@@ -20,11 +19,6 @@ app = FastAPI(title="Telegram Bot Service (Test Mode)")
 async def startup():
     print("🚀 Starting Telegram Bot Service (Test Mode with MemoryStorage)...")
     setup_logging()
-
-    # Tortoise
-    print("📊 Initializing database...")
-    await init_db()
-    print("✅ Database initialized")
 
     # Memory storage for FSM (вместо Redis для тестирования)
     storage = MemoryStorage()
@@ -50,12 +44,6 @@ async def startup():
     print("✅ Bots are running!")
     print(f"📱 Manager Bot: @{(await manager_bot.get_me()).username}")
     print(f"🔧 Admin Bot: @{(await admin_bot.get_me()).username}")
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    print("🛑 Shutting down...")
-    await close_db()
 
 
 @app.get("/")

@@ -1,7 +1,6 @@
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
-from app.db.models import PendingRegistration
 from app.services.api_gateway_client import api_gateway_client
 from app.bots.manager_bot.bot import get_manager_bot
 from app.core.config import settings
@@ -27,7 +26,6 @@ async def cmd_start(message: Message):
         "🔧 Admin Bot\n\n"
         "Доступные команды:\n"
         "/pending — просмотр pending регистраций\n"
-        "/managers — управление менеджерами\n"
         "/help — справка"
     )
 
@@ -38,23 +36,38 @@ async def cmd_pending(message: Message):
         await message.reply("⛔ У вас нет доступа к этому боту")
         return
 
-    items = await PendingRegistration.filter(status="pending").order_by("-created_at")
+    try:
+        items = await api_gateway_client.get_pending_registrations(status="pending")
+    except Exception as exc:
+        logger.exception("Failed to get pending registrations from API Gateway")
+        await message.answer("❌ Ошибка при получении списка заявок")
+        return
+
     if not items:
         await message.answer("📭 Нет ожидающих заявок")
         return
 
     for p in items:
-        birth_info = f"🎂 Дата рождения: {p.birth_date.isoformat()}\n" if getattr(p, 'birth_date', None) else ""
+        registration_id = p.get('id')
+        name = p.get('name', 'N/A')
+        phone = p.get('phone', 'N/A')
+        role = p.get('role', 'N/A')
+        birth_date = p.get('birth_date', '')
+        created_at = p.get('created_at', '')
+        telegram_id = p.get('telegram_id')
+        
+        birth_info = f"🎂 Дата рождения: {birth_date}\n" if birth_date else ""
+        
         text = (
-            f"📋 Заявка #{p.id}\n"
-            f"👤 ФИО: {p.name}\n"
-            f"📧 Email: {p.email}\n"
-            f"📱 Телефон: {p.phone}\n"
-            f"💼 Роль: {p.role}\n"
+            f"📋 Заявка #{registration_id}\n"
+            f"👤 ФИО: {name}\n"
+            f" Телефон: {phone}\n"
+            f"💼 Роль: {role}\n"
             f"{birth_info}"
-            f"📅 Дата: {p.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
-            f"Для одобрения: approve {p.id}\n"
-            f"Для отклонения: reject {p.id} причина"
+            f"🆔 Telegram ID: {telegram_id}\n"
+            f"📅 Дата: {created_at}\n\n"
+            f"Для одобрения: approve {registration_id}\n"
+            f"Для отклонения: reject {registration_id} причина"
         )
         await message.answer(text)
 
@@ -77,42 +90,31 @@ async def text_handler(message: Message):
     
     if cmd == "approve" and len(parts) >= 2:
         try:
-            pid = int(parts[1])
-            p = await PendingRegistration.get_or_none(id=pid)
-            if not p:
-                await message.answer("❌ Заявка не найдена")
-                return
+            registration_id = int(parts[1])
             
-            # create manager via API Gateway
-            data = {
-                "telegram_id": p.telegram_id,
-                "name": p.name,
-                "email": p.email,
-                "phone": p.phone,
-                "role": p.role,
-                "is_active": True,
-            }
-            
+            # Одобряем через API Gateway
             try:
-                await api_gateway_client.create_manager(data)
+                result = await api_gateway_client.approve_registration(
+                    registration_id=registration_id,
+                    admin_id=message.from_user.id
+                )
+                
+                # Уведомляем менеджера
+                telegram_id = result.get('telegram_id')
+                if telegram_id:
+                    mgr_bot = get_manager_bot().get()
+                    if mgr_bot:
+                        try:
+                            await mgr_bot.send_message(telegram_id, "✅ Ваша регистрация одобрена!")
+                        except Exception as exc:
+                            logger.exception("Failed to notify manager")
+                
+                await message.answer(f"✅ Заявка #{registration_id} одобрена")
+                
             except Exception as exc:
-                logger.exception("Failed to create manager via API Gateway")
-                await message.answer("❌ Ошибка при создании менеджера через API Gateway")
+                logger.exception("Failed to approve registration via API Gateway")
+                await message.answer("❌ Ошибка при одобрении заявки")
                 return
-            
-            p.status = "approved"
-            p.processed_by_admin_id = message.from_user.id
-            await p.save()
-            
-            # notify manager via manager bot
-            mgr_bot = get_manager_bot().get()
-            if mgr_bot:
-                try:
-                    await mgr_bot.send_message(p.telegram_id, "✅ Ваша регистрация одобрена!")
-                except Exception as exc:
-                    logger.exception("Failed to notify manager")
-            
-            await message.answer(f"✅ Заявка #{p.id} одобрена")
             
         except ValueError:
             await message.answer("❌ Неверный id")
@@ -122,29 +124,33 @@ async def text_handler(message: Message):
     
     elif cmd == "reject" and len(parts) >= 2:
         try:
-            pid = int(parts[1])
+            registration_id = int(parts[1])
             reason = " ".join(parts[2:]) if len(parts) > 2 else "не указана"
             
-            p = await PendingRegistration.get_or_none(id=pid)
-            if not p:
-                await message.answer("❌ Заявка не найдена")
+            try:
+                result = await api_gateway_client.reject_registration(
+                    registration_id=registration_id,
+                    admin_id=message.from_user.id,
+                    reason=reason
+                )
+                
+                # Уведомляем менеджера
+                telegram_id = result.get('telegram_id')
+                if telegram_id:
+                    mgr_bot = get_manager_bot().get()
+                    if mgr_bot:
+                        try:
+                            text_msg = f"❌ Ваша регистрация отклонена. Причина: {reason}"
+                            await mgr_bot.send_message(telegram_id, text_msg)
+                        except Exception as exc:
+                            logger.exception("Failed to notify manager about rejection")
+                
+                await message.answer(f"❌ Заявка #{registration_id} отклонена")
+                
+            except Exception as exc:
+                logger.exception("Failed to reject registration via API Gateway")
+                await message.answer("❌ Ошибка при отклонении заявки")
                 return
-            
-            p.status = "rejected"
-            p.rejection_reason = reason
-            p.processed_by_admin_id = message.from_user.id
-            await p.save()
-            
-            # notify
-            mgr_bot = get_manager_bot().get()
-            if mgr_bot:
-                try:
-                    text = f"❌ Ваша регистрация отклонена. Причина: {reason}"
-                    await mgr_bot.send_message(p.telegram_id, text)
-                except Exception as exc:
-                    logger.exception("Failed to notify manager about rejection")
-            
-            await message.answer(f"❌ Заявка #{p.id} отклонена")
             
         except ValueError:
             await message.answer("❌ Неверный id")

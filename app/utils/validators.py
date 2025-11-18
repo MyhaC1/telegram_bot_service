@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 
 def is_valid_email(email: str) -> bool:
@@ -21,3 +22,19 @@ def is_valid_telegram_id(tid: str) -> bool:
         return True
     except Exception:
         return False
+
+
+def is_valid_date(date_str: str) -> bool:
+    """Validate date in YYYY-MM-DD format, not in the future, and reasonable year (>=1900)."""
+    if not date_str:
+        return False
+    try:
+        dt = datetime.fromisoformat(date_str)
+    except ValueError:
+        return False
+    now = datetime.now()
+    if dt > now:
+        return False
+    if dt.year < 1900:
+        return False
+    return True

@@ -6,6 +6,8 @@ import json
 from app.db.models import PendingRegistration
 from app.utils.logging import logger
 from app.core.config import settings
+from app.utils.validators import is_valid_email, is_valid_phone, is_valid_date
+from datetime import date
 
 router = Router()
 
@@ -44,20 +46,46 @@ async def handle_webapp_data(message: Message):
         logger.info(f"Received WebApp data: {data}")
         
         # Проверяем что все поля заполнены
-        required_fields = ['name', 'email', 'phone', 'role']
+        required_fields = ['name', 'email', 'phone', 'role', 'birth_date']
         if not all(field in data for field in required_fields):
             await message.answer("❌ Ошибка: не все поля заполнены")
+            return
+
+        # Валидация полей
+        if not is_valid_email(data.get('email')):
+            await message.answer("❌ Некорректный email")
+            return
+        if not is_valid_phone(data.get('phone')):
+            await message.answer("❌ Некорректный номер телефона")
+            return
+        if not is_valid_date(data.get('birth_date')):
+            await message.answer("❌ Некорректная дата рождения")
+            return
+
+        # Разрешённые роли
+        allowed_roles = {"sale", "reten", "admin", "lead"}
+        role_value = str(data.get('role')).lower()
+        if role_value not in allowed_roles:
+            await message.answer("❌ Некорректная роль")
             return
         
         # Создаём pending регистрацию
         try:
+            # Преобразуем дату рождения в объект date
+            birth_date_val = None
+            try:
+                birth_date_val = date.fromisoformat(data.get('birth_date'))
+            except Exception:
+                birth_date_val = None
+
             pending = await PendingRegistration.create(
                 telegram_id=message.from_user.id,
                 telegram_username=message.from_user.username,
                 name=data['name'],
                 email=data['email'],
                 phone=data['phone'],
-                role=data['role'].lower(),
+                birth_date=birth_date_val,
+                role=role_value,
                 status='pending'
             )
             
@@ -66,7 +94,8 @@ async def handle_webapp_data(message: Message):
                 f"👤 ФИО: {data['name']}\n"
                 f"📧 Email: {data['email']}\n"
                 f"📱 Телефон: {data['phone']}\n"
-                f"💼 Роль: {data['role']}\n\n"
+                f"💼 Роль: {data['role']}\n"
+                f"🎂 Дата рождения: {data.get('birth_date')}\n\n"
                 f"Администратор рассмотрит вашу заявку и уведомит о решении."
             )
             

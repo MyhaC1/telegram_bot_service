@@ -44,12 +44,14 @@ async def cmd_pending(message: Message):
         return
 
     for p in items:
+        birth_info = f"🎂 Дата рождения: {p.birth_date.isoformat()}\n" if getattr(p, 'birth_date', None) else ""
         text = (
             f"📋 Заявка #{p.id}\n"
             f"👤 ФИО: {p.name}\n"
             f"📧 Email: {p.email}\n"
             f"📱 Телефон: {p.phone}\n"
             f"💼 Роль: {p.role}\n"
+            f"{birth_info}"
             f"📅 Дата: {p.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
             f"Для одобрения: approve {p.id}\n"
             f"Для отклонения: reject {p.id} причина"

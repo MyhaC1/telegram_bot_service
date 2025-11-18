@@ -8,6 +8,7 @@ class PendingRegistration(models.Model):
     name = fields.CharField(max_length=255)
     email = fields.CharField(max_length=255)
     phone = fields.CharField(max_length=20)
+    birth_date = fields.DateField(null=True)
     role = fields.CharField(max_length=50)
     status = fields.CharField(max_length=20, default="pending")
     rejection_reason = fields.TextField(null=True)

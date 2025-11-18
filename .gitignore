@@ -1,0 +1,42 @@
+# Игнорируем виртуальное окружение
+.venv/
+venv/
+env/
+
+# Игнорируем файлы окружения
+.env
+.env.local
+
+# База данных
+*.db
+*.sqlite
+*.sqlite3
+dev.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Логи
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Миграции (можно раскомментировать если нужно)
+# migrations/

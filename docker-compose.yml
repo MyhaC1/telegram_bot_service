@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: telegram_bot_db
+      POSTGRES_USER: bot_user
+      POSTGRES_PASSWORD: bot_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - microservices_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - microservices_network
+
+  bot:
+    build: .
+    container_name: telegram_bot_service
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      DATABASE_URL: postgres://bot_user:bot_password@postgres:5432/telegram_bot_db
+      REDIS_URL: redis://redis:6379/0
+      API_GATEWAY_URL: http://api_gateway:8080
+      BOT_TOKEN_MANAGER: ${BOT_TOKEN_MANAGER}
+      BOT_TOKEN_ADMIN: ${BOT_TOKEN_ADMIN}
+      ADMIN_TELEGRAM_IDS: ${ADMIN_TELEGRAM_IDS}
+      ENVIRONMENT: production
+    ports:
+      - "8002:8002"
+    networks:
+      - microservices_network
+
+networks:
+  microservices_network:
+    name: microservices_network
+    external: true
+
+volumes:
+  postgres_data:
+  redis_data:

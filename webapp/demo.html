@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebApp Demo - Manager Registration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .step {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 10px 5px;
+            font-weight: 500;
+        }
+        .btn:hover {
+            background: #1976D2;
+        }
+        .btn-success {
+            background: #4CAF50;
+        }
+        .btn-success:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Telegram Mini App Demo</h1>
+        <p>Демонстрация формы регистрации менеджера</p>
+
+        <div class="warning">
+            ⚠️ <strong>Важно:</strong> Telegram WebApp API работает только внутри Telegram!<br>
+            Эта страница показывает только внешний вид формы. Для полноценного тестирования разверните на GitHub Pages.
+        </div>
+
+        <div class="step">
+            <h3>📋 Шаг 1: Разместите WebApp</h3>
+            <p>Загрузите файл <code>webapp/index.html</code> на GitHub Pages или другой HTTPS хостинг.</p>
+            <a href="DEPLOY_WEBAPP.md" class="btn">📖 Инструкция по деплою</a>
+        </div>
+
+        <div class="step">
+            <h3>🔧 Шаг 2: Настройте бота</h3>
+            <p>Обновите <code>.env</code> файл с URL вашего WebApp:</p>
+            <div class="code-block">
+WEBAPP_URL=https://YOUR_GITHUB_USERNAME.github.io/telegram_bot_service/webapp/
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>🚀 Шаг 3: Запустите бота</h3>
+            <div class="code-block">
+python test_bot.py
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>✅ Шаг 4: Тестируйте в Telegram</h3>
+            <p>Откройте вашего бота в Telegram и нажмите кнопку "📝 Зарегистрироваться"</p>
+        </div>
+
+        <hr style="margin: 30px 0;">
+
+        <h2>👀 Предпросмотр WebApp</h2>
+        <p>Так будет выглядеть форма регистрации (без функционала Telegram API):</p>
+        
+        <iframe src="index.html" frameborder="0"></iframe>
+
+        <hr style="margin: 30px 0;">
+
+        <h2>📊 Структура проекта</h2>
+        <div class="code-block">
+telegram_bot_service/
+├── webapp/
+│   ├── index.html          ← Форма регистрации (WebApp)
+│   └── demo.html           ← Эта демо-страница
+├── app/
+│   └── bots/
+│       └── manager_bot/
+│           └── handlers/
+│               └── webapp.py  ← Обработчик данных из WebApp
+└── DEPLOY_WEBAPP.md        ← Инструкция по деплою
+        </div>
+
+        <h2>🔗 Полезные ссылки</h2>
+        <a href="https://core.telegram.org/bots/webapps" class="btn" target="_blank">Telegram WebApp Docs</a>
+        <a href="https://pages.github.com/" class="btn btn-success" target="_blank">GitHub Pages Setup</a>
+    </div>
+</body>
+</html>

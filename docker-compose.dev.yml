@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices_network
+
+  bot:
+    build: .
+    container_name: telegram_bot_service_dev
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      DATABASE_URL: sqlite://./dev.db
+      REDIS_URL: redis://redis:6379/0
+      API_GATEWAY_URL: http://api_gateway:8080
+      BOT_TOKEN_MANAGER: ${BOT_TOKEN_MANAGER}
+      BOT_TOKEN_ADMIN: ${BOT_TOKEN_ADMIN}
+      ADMIN_TELEGRAM_IDS: ${ADMIN_TELEGRAM_IDS}
+      ENVIRONMENT: development
+      DEBUG: "true"
+    ports:
+      - "8002:8002"
+    volumes:
+      - .:/app
+    networks:
+      - microservices_network
+
+networks:
+  microservices_network:
+    driver: bridge

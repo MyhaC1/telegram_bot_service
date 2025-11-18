@@ -4,6 +4,63 @@ from app.core.config import settings
 from app.utils.logging import logger
 
 
+class MockAPIGatewayClient:
+    """Mock API Gateway клиент для тестирования без реального API Gateway"""
+    
+    def __init__(self):
+        self._pending_registrations = []
+        self._next_id = 1
+        logger.info("🧪 Using Mock API Gateway Client (no real API Gateway needed)")
+    
+    async def create_pending_registration(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        registration = {
+            "id": self._next_id,
+            **data,
+            "created_at": "2025-11-18T16:00:00"
+        }
+        self._pending_registrations.append(registration)
+        self._next_id += 1
+        logger.info(f"📝 Mock: Created pending registration #{registration['id']}")
+        return registration
+    
+    async def get_pending_registrations(self, status: str = "pending") -> List[Dict[str, Any]]:
+        result = [r for r in self._pending_registrations if r.get("status") == status]
+        logger.info(f"📋 Mock: Retrieved {len(result)} pending registrations")
+        return result
+    
+    async def approve_registration(self, registration_id: int, admin_id: int) -> Dict[str, Any]:
+        for reg in self._pending_registrations:
+            if reg["id"] == registration_id:
+                reg["status"] = "approved"
+                reg["processed_by_admin_id"] = admin_id
+                logger.info(f"✅ Mock: Approved registration #{registration_id}")
+                return reg
+        raise Exception(f"Registration {registration_id} not found")
+    
+    async def reject_registration(self, registration_id: int, admin_id: int, reason: str) -> Dict[str, Any]:
+        for reg in self._pending_registrations:
+            if reg["id"] == registration_id:
+                reg["status"] = "rejected"
+                reg["rejection_reason"] = reason
+                reg["processed_by_admin_id"] = admin_id
+                logger.info(f"❌ Mock: Rejected registration #{registration_id}")
+                return reg
+        raise Exception(f"Registration {registration_id} not found")
+    
+    async def create_manager(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        logger.info(f"👤 Mock: Created manager for telegram_id={data.get('telegram_id')}")
+        return {"id": self._next_id, **data}
+    
+    async def get_manager(self, telegram_id: int) -> Dict[str, Any]:
+        return {}
+    
+    async def update_manager(self, telegram_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        return {"telegram_id": telegram_id, **data}
+    
+    async def create_client(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        return {"id": self._next_id, **data}
+
+
 class APIGatewayClient:
     def __init__(self, base_url: Optional[str] = None):
         self.base_url = base_url or str(settings.API_GATEWAY_URL)
@@ -103,4 +160,8 @@ class APIGatewayClient:
             raise
 
 
-api_gateway_client = APIGatewayClient()
+# Выбираем клиент в зависимости от настроек
+if settings.USE_MOCK_API_GATEWAY:
+    api_gateway_client = MockAPIGatewayClient()
+else:
+    api_gateway_client = APIGatewayClient()

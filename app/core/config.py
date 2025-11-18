@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     PORT: int = 8002
 
     API_GATEWAY_URL: str = "http://api_gateway:8080"
+    # Включить mock-режим для тестирования без реального API Gateway
+    USE_MOCK_API_GATEWAY: bool = False
 
     BOT_TOKEN_MANAGER: str
     BOT_TOKEN_ADMIN: str
